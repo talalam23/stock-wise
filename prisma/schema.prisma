@@ -1,0 +1,41 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  sku         String     @unique 
+  description String?
+  price       Float
+  quantity    Int        @default(0) 
+  minLevel    Int        @default(5) 
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  movements   Movement[]
+}
+
+model Movement {
+  id        String       @id @default(cuid())
+  type      MovementType
+  quantity  Int
+  notes     String?
+  createdAt DateTime     @default(now())
+  
+  product   Product      @relation(fields: [productId], references: [id])
+  productId String
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
