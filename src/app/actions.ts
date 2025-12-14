@@ -4,19 +4,30 @@
 import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 
-// 1. Dashboard Stats (The "BI" part)
+// 1. Dashboard Stats (Updated with Revenue)
 export async function getDashboardStats() {
   const products = await prisma.product.findMany()
   
+  // Calculate Inventory Value
   const totalValue = products.reduce((acc, p) => acc + (p.price * p.quantity), 0)
+  
+  // Calculate Total Sales Revenue (New Feature)
+  // We fetch all "OUT" movements and sum (qty * price)
+  const salesMovements = await prisma.movement.findMany({
+    where: { type: 'OUT' },
+    include: { product: true }
+  })
+  const totalRevenue = salesMovements.reduce((acc, m) => acc + (m.quantity * m.product.price), 0)
+
   const lowStock = products.filter(p => p.quantity < p.minLevel).length
+  
   const recentMovements = await prisma.movement.findMany({
     take: 5,
     orderBy: { createdAt: 'desc' },
-    include: { product: true } // Join table
+    include: { product: true }
   })
 
-  return { totalValue, lowStock, recentMovements, productCount: products.length }
+  return { totalValue, totalRevenue, lowStock, recentMovements, productCount: products.length }
 }
 
 // 2. Get Inventory
@@ -39,7 +50,6 @@ export async function createProduct(formData: FormData) {
       sku,
       price,
       quantity,
-      // Create initial movement record for history
       movements: {
         create: {
           type: "IN",
@@ -50,33 +60,55 @@ export async function createProduct(formData: FormData) {
     }
   })
   
-  revalidatePath("/") // Refresh the UI
+  revalidatePath("/")
 }
 
-// 4. The ERP Logic: Transactional Stock Adjustment
+// 4. Update Stock (Single Item)
 export async function updateStock(productId: string, adjustment: number, type: "IN" | "OUT" | "ADJUSTMENT", notes?: string) {
-  // Use a transaction to ensure data integrity
   await prisma.$transaction(async (tx) => {
-    // 1. Update the Product count
     await tx.product.update({
       where: { id: productId },
-      data: {
-        quantity: {
-          increment: type === "OUT" ? -adjustment : adjustment
-        }
-      }
+      data: { quantity: { increment: type === "OUT" ? -adjustment : adjustment } }
     })
 
-    // 2. Log the Movement (History)
     await tx.movement.create({
-      data: {
-        type,
-        quantity: adjustment,
-        productId,
-        notes
-      }
+      data: { type, quantity: adjustment, productId, notes }
     })
   })
   
   revalidatePath("/")
+}
+
+// 5. Multi-Product Sales Order (Cart Logic)
+export async function recordSale(items: { productId: string; quantity: number }[]) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const product = await tx.product.findUnique({ where: { id: item.productId } })
+        
+        if (!product || product.quantity < item.quantity) {
+          throw new Error(`Insufficient stock for product ID ${item.productId}`)
+        }
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { quantity: { decrement: item.quantity } }
+        })
+
+        await tx.movement.create({
+          data: {
+            type: "OUT",
+            quantity: item.quantity,
+            productId: item.productId,
+            notes: "Sales Order"
+          }
+        })
+      }
+    })
+    
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Stock error. Sale failed." }
+  }
 }
