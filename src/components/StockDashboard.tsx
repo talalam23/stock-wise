@@ -2,7 +2,8 @@
 'use client'
 
 import { useState } from "react"
-import { createProduct, updateStock, recordSale } from "@/app/actions"
+import ReactMarkdown from "react-markdown"
+import { createProduct, updateStock, recordSale, generateAIReport } from "@/app/actions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownRight, ShoppingCart, Trash2, DollarSign } from "lucide-react"
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownRight, ShoppingCart, Trash2, DollarSign, Sparkles, Loader2 } from "lucide-react"
 
 export default function StockDashboard({ products, stats }: { products: any[], stats: any }) {
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -26,6 +27,9 @@ export default function StockDashboard({ products, stats }: { products: any[], s
   const [cart, setCart] = useState<{ productId: string; name: string; quantity: number }[]>([])
   const [selectedProduct, setSelectedProduct] = useState("")
   const [qtyInput, setQtyInput] = useState(1)
+
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiReport, setAiReport] = useState("")
 
   // Helper to add items to cart
   const addToCart = () => {
@@ -55,8 +59,47 @@ export default function StockDashboard({ products, stats }: { products: any[], s
     return { label: "Healthy", color: "bg-green-500" }
   }
 
+  const handleGenerateAI = async () => {
+    setAiLoading(true)
+    const result = await generateAIReport()
+    if (result.success && result.report) {
+        setAiReport(result.report)
+    } else {
+        alert("AI Service Unavailable")
+    }
+    setAiLoading(false)
+  }
+
   return (
     <div className="space-y-6">
+      {/* AI Insight Section */}
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center bg-linear-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-blue-100">
+            <div>
+                <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    AI Supply Chain Analyst
+                </h3>
+                <p className="text-sm text-blue-700">Generate real-time insights using Google Gemini 1.5 Flash</p>
+            </div>
+            <Button onClick={handleGenerateAI} disabled={aiLoading} className="bg-purple-600 hover:bg-purple-700">
+                {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                {aiLoading ? "Analyzing Data..." : "Generate Report"}
+            </Button>
+        </div>
+
+        {/* The AI Output Area */}
+        {aiReport && (
+            <Card className="bg-slate-50 border-purple-200 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-base font-semibold">Executive Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="prose prose-sm max-w-none text-slate-700">
+                    <ReactMarkdown>{aiReport}</ReactMarkdown>
+                </CardContent>
+            </Card>
+        )}
+      </div>
       {/* 1. KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>

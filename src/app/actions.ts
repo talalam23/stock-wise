@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 // 1. Dashboard Stats (Updated with Revenue)
 export async function getDashboardStats() {
@@ -110,5 +111,40 @@ export async function recordSale(items: { productId: string; quantity: number }[
     return { success: true }
   } catch (error) {
     return { success: false, error: "Stock error. Sale failed." }
+  }
+}
+
+// 6. Gemini AI Insight Generator
+export async function generateAIReport() {
+  const products = await prisma.product.findMany()
+  const stats = await getDashboardStats() // Reuse your existing stats logic
+
+  // 1. Prepare the Data for the AI
+  const prompt = `
+    You are an expert Supply Chain Manager for a retail store. 
+    Analyze the following inventory data and generate a brief Executive Summary (max 150 words) and 3 Bulleted Actionable Recommendations.
+    
+    Current Stats:
+    - Total Value: $${stats.totalValue}
+    - Revenue: $${stats.totalRevenue}
+    - Low Stock Items: ${stats.lowStock}
+
+    Product List (Top items):
+    ${products.map(p => `- ${p.name} (Qty: ${p.quantity}, Min: ${p.minLevel})`).join('\n')}
+
+    Focus on cash flow, restock risks, and sales opportunities. Use professional formatting.
+  `
+
+  // 2. Call Gemini
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    return { success: true, report: response.text() }
+  } catch (error) {
+    console.error(error)
+    return { success: false, error: "Failed to generate AI report." }
   }
 }
