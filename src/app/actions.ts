@@ -132,13 +132,13 @@ export async function generateAIReport() {
     Product List (Top items):
     ${products.map(p => `- ${p.name} (Qty: ${p.quantity}, Min: ${p.minLevel})`).join('\n')}
 
-    Focus on cash flow, restock risks, and sales opportunities. Use professional formatting.
+    Focus on cash flow, restock risks, and sales opportunities. Use professional formatting. Keep everything short and concise, using simple language.
   `
 
   // 2. Call Gemini
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const result = await model.generateContent(prompt)
     const response = await result.response

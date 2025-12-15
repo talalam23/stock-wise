@@ -23,15 +23,26 @@ export default function StockDashboard({ products, stats }: { products: any[], s
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isSaleOpen, setIsSaleOpen] = useState(false)
   
+  // AI State
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiReport, setAiReport] = useState("")
+  
   // Sales Cart State
   const [cart, setCart] = useState<{ productId: string; name: string; quantity: number }[]>([])
   const [selectedProduct, setSelectedProduct] = useState("")
   const [qtyInput, setQtyInput] = useState(1)
 
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiReport, setAiReport] = useState("")
+  const handleGenerateAI = async () => {
+    setAiLoading(true)
+    const result = await generateAIReport()
+    if (result.success && result.report) {
+        setAiReport(result.report)
+    } else {
+        alert("AI Service Unavailable")
+    }
+    setAiLoading(false)
+  }
 
-  // Helper to add items to cart
   const addToCart = () => {
     if (!selectedProduct) return
     const product = products.find(p => p.id === selectedProduct)
@@ -42,7 +53,6 @@ export default function StockDashboard({ products, stats }: { products: any[], s
     setSelectedProduct("")
   }
 
-  // Helper to checkout
   const handleCheckout = async () => {
     const result = await recordSale(cart)
     if (result.success) {
@@ -59,36 +69,25 @@ export default function StockDashboard({ products, stats }: { products: any[], s
     return { label: "Healthy", color: "bg-green-500" }
   }
 
-  const handleGenerateAI = async () => {
-    setAiLoading(true)
-    const result = await generateAIReport()
-    if (result.success && result.report) {
-        setAiReport(result.report)
-    } else {
-        alert("AI Service Unavailable")
-    }
-    setAiLoading(false)
-  }
-
   return (
     <div className="space-y-6">
-      {/* AI Insight Section */}
+      
+      {/* AI Insight Section (Responsive) */}
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center bg-linear-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-blue-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-linear-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-blue-100 gap-4">
             <div>
                 <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-600" />
                     AI Supply Chain Analyst
                 </h3>
-                <p className="text-sm text-blue-700">Generate real-time insights using Google Gemini 1.5 Flash</p>
+                <p className="text-sm text-blue-700">Real-time insights via Gemini 2.5</p>
             </div>
-            <Button onClick={handleGenerateAI} disabled={aiLoading} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleGenerateAI} disabled={aiLoading} className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700">
                 {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                {aiLoading ? "Analyzing Data..." : "Generate Report"}
+                {aiLoading ? "Analyzing..." : "Generate Report"}
             </Button>
         </div>
 
-        {/* The AI Output Area */}
         {aiReport && (
             <Card className="bg-slate-50 border-purple-200 shadow-sm">
                 <CardHeader>
@@ -100,26 +99,27 @@ export default function StockDashboard({ products, stats }: { products: any[], s
             </Card>
         )}
       </div>
-      {/* 1. KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+
+      {/* 1. KPI Cards (Grid optimized for mobile) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">${stats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Lifetime Sales</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+            <CardTitle className="text-sm font-medium">Asset Value</CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Asset Value</p>
+            <div className="text-xl sm:text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Inventory Cost</p>
           </CardContent>
         </Card>
         <Card>
@@ -128,31 +128,31 @@ export default function StockDashboard({ products, stats }: { products: any[], s
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.lowStock}</div>
-            <p className="text-xs text-muted-foreground">Action Needed</p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.lowStock}</div>
+            <p className="text-xs text-muted-foreground">Alerts</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <CardTitle className="text-sm font-medium">Products</CardTitle>
             <Package className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.productCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.productCount}</div>
             <p className="text-xs text-muted-foreground">Active SKUs</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* 2. Action Bar */}
-      <div className="flex justify-between items-center">
+      {/* 2. Action Bar (Stacked on mobile) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold tracking-tight">Stock Management</h2>
         
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
             {/* Sales Order Button */}
             <Dialog open={isSaleOpen} onOpenChange={setIsSaleOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="secondary" className="border"><ShoppingCart className="mr-2 h-4 w-4" /> New Sales Order</Button>
+                    <Button variant="secondary" className="w-full sm:w-auto border"><ShoppingCart className="mr-2 h-4 w-4" /> New Sales Order</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -185,7 +185,6 @@ export default function StockDashboard({ products, stats }: { products: any[], s
                              <Button onClick={addToCart} disabled={!selectedProduct}>Add</Button>
                         </div>
 
-                        {/* Cart List */}
                         <div className="border rounded-md p-2 min-h-25 space-y-2 bg-slate-50">
                             {cart.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Cart is empty</p>}
                             {cart.map((item, idx) => (
@@ -213,7 +212,7 @@ export default function StockDashboard({ products, stats }: { products: any[], s
             {/* Add Product Button */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-                <Button><Package className="mr-2 h-4 w-4" /> Add Product</Button>
+                <Button className="w-full sm:w-auto"><Package className="mr-2 h-4 w-4" /> Add Product</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -248,15 +247,15 @@ export default function StockDashboard({ products, stats }: { products: any[], s
         </div>
       </div>
 
-      {/* 3. The ERP Table */}
-      <div className="border rounded-lg">
+      {/* 3. The ERP Table (Scrollable on mobile) */}
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>SKU</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead className="min-w-25">Name</TableHead>
               <TableHead>Price</TableHead>
-              <TableHead>Stock Level</TableHead>
+              <TableHead className="min-w-25">Stock</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -266,21 +265,21 @@ export default function StockDashboard({ products, stats }: { products: any[], s
               const status = getPriority(product.quantity, product.minLevel)
               return (
                 <TableRow key={product.id}>
-                  <TableCell className="font-mono text-xs">{product.sku}</TableCell>
+                  <TableCell className="font-mono text-xs whitespace-nowrap">{product.sku}</TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>${product.price}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-bold">{product.quantity}</span>
-                      <span className="text-xs text-muted-foreground">/ {product.minLevel} min</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">/ {product.minLevel} min</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`${status.color} hover:${status.color} text-white`}>
+                    <Badge className={`${status.color} hover:${status.color} text-white whitespace-nowrap`}>
                         {status.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
+                  <TableCell className="text-right space-x-2 whitespace-nowrap">
                     <Button 
                         size="sm" 
                         variant="outline"
