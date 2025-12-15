@@ -13,7 +13,7 @@ A full-stack, AI-powered Inventory Management System designed for small business
 
 * **Transactional Inventory:** Implements **ACID-compliant transactions** for stock movements (In/Out/Adjustments) to ensure strict financial accuracy.
 * **Sales Orders:** Batch processing of multi-item sales with automatic stock deduction and revenue calculation.
-* **AI Business Intelligence:** Integrated **Google Gemini 1.5 Flash** to analyze stock levels and generate executive summaries and risk assessments.
+* **AI Business Intelligence:** Integrated **Google Gemini 2.5 Flash** to analyze stock levels and generate executive summaries and risk assessments.
 * **Real-time Dashboard:** Server-side rendered analytics for zero-latency KPI tracking.
 
 ## Tech Stack
@@ -29,7 +29,7 @@ A full-stack, AI-powered Inventory Management System designed for small business
 
 1.  **Clone the repo**
     ```bash
-    git clone [https://github.com/talalam23/stock-wise.git](https://github.com/talalam23/stock-wise.git)
+    git clone https://github.com/talalam23/stock-wise.git
     cd stockwise
     ```
 
